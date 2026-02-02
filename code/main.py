@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import os
 
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS']
 plt.rcParams['axes.unicode_minus'] = False 
@@ -13,13 +14,12 @@ plt.rcParams['axes.unicode_minus'] = False
 def load_and_process_data():
     print("正在读取数据...")
     
+    # 获取脚本所在目录
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
     # 1. 读取 ETF 价格数据
-    # 假设文件在当前目录下，根据附件名读取
-    try:
-        price_df = pd.read_csv('附件2 ETF日频量价数据（开盘、收盘、高、低、成交量、成交额）.csv', parse_dates=['date'])
-    except FileNotFoundError:
-        print("未找到数据文件，尝试生成模拟数据用于演示...")
-        return generate_mock_data()
+    price_file = os.path.join(script_dir, '附件2 ETF日频量价数据（开盘、收盘、高、低、成交量、成交额）.csv')
+    price_df = pd.read_csv(price_file, parse_dates=['date'])
 
     # 数据透视：转为 宽表 (Index=Date, Columns=Ticker, Values=Close)
     prices = price_df.pivot(index='date', columns='sec', values='close')
@@ -30,22 +30,11 @@ def load_and_process_data():
     prices = prices.ffill()
     
     # 2. 读取宏观数据
-    try:
-        macro_df = pd.read_csv('附件3 高频经济指标（信用利差、期限利差、汇率等）.csv', index_col=0, parse_dates=True)
-    except FileNotFoundError:
-        macro_df = pd.DataFrame() # 空数据备用
+    macro_file = os.path.join(script_dir, '附件3 高频经济指标（信用利差、期限利差、汇率等）.csv')
+    macro_df = pd.read_csv(macro_file, index_col=0, parse_dates=True)
 
     print(f"数据读取完成。ETF数量: {prices.shape[1]}, 时间跨度: {prices.index.min()} 至 {prices.index.max()}")
     return prices, macro_df
-
-def generate_mock_data():
-    """ 备用：如果本地没有文件，生成模拟数据防止报错 """
-    dates = pd.date_range(start='2020-01-01', end='2023-12-31', freq='B')
-    tickers = [f'510{i:03d}.SH' for i in range(28)]
-    prices = pd.DataFrame(index=dates, columns=tickers)
-    for i, t in enumerate(tickers):
-        prices[t] = 100 * np.cumprod(1 + np.random.normal(0.0005, 0.02, len(dates)))
-    return prices, pd.DataFrame()
 
 # ==========================================
 # 2. 任务一：因子构建 (Factor Construction)
